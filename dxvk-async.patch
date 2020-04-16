@@ -12,7 +12,7 @@ index 8fa3ce61..5e4d32d1 100644
    output: 'version.h')
  
 diff --git a/src/dxvk/dxvk_context.cpp b/src/dxvk/dxvk_context.cpp
-index 797c4e20..48e1aa1c 100644
+index 797c4e20..e77a00bf 100644
 --- a/src/dxvk/dxvk_context.cpp
 +++ b/src/dxvk/dxvk_context.cpp
 @@ -570,7 +570,7 @@ namespace dxvk {
@@ -33,16 +33,18 @@ index 797c4e20..48e1aa1c 100644
  
      // Find out if the render target view is currently bound,
      // so that we can avoid spilling the render pass if it is.
-@@ -3837,7 +3837,7 @@ namespace dxvk {
+@@ -3837,7 +3837,9 @@ namespace dxvk {
        : DxvkContextFlag::GpDirtyStencilRef);
      
      // Retrieve and bind actual Vulkan pipeline handle
 -    m_gpActivePipeline = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state, m_state.om.framebuffer->getRenderPass());
-+    m_gpActivePipeline = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state, m_state.om.framebuffer->getRenderPass(), this->checkAsyncCompilationCompat());
++    m_gpActivePipeline = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state,
++                                                                m_state.om.framebuffer->getRenderPass(),
++                                                                this->checkAsyncCompilationCompat());
  
      if (unlikely(!m_gpActivePipeline))
        return false;
-@@ -4093,7 +4093,7 @@ namespace dxvk {
+@@ -4093,7 +4095,7 @@ namespace dxvk {
    }
    
    
@@ -51,7 +53,7 @@ index 797c4e20..48e1aa1c 100644
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer)) {
        m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
  
-@@ -4114,6 +4114,11 @@ namespace dxvk {
+@@ -4114,6 +4116,11 @@ namespace dxvk {
          m_state.gp.state.omSwizzle[i] = DxvkOmAttachmentSwizzle(mapping);
        }
  
@@ -63,7 +65,7 @@ index 797c4e20..48e1aa1c 100644
        m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
      }
    }
-@@ -4343,7 +4348,7 @@ namespace dxvk {
+@@ -4343,7 +4350,7 @@ namespace dxvk {
      }
  
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer))
@@ -72,7 +74,7 @@ index 797c4e20..48e1aa1c 100644
  
      if (!m_flags.test(DxvkContextFlag::GpRenderPassBound))
        this->startRenderPass();
-@@ -4794,4 +4799,13 @@ namespace dxvk {
+@@ -4794,4 +4801,13 @@ namespace dxvk {
      return m_cpLookupCache[idx];
    }
    

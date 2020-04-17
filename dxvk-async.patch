@@ -319,10 +319,10 @@ index 6843c16f..70bcd437 100644
      bool enableOpenVR;
 diff --git a/src/dxvk/dxvk_pipecompiler.cpp b/src/dxvk/dxvk_pipecompiler.cpp
 new file mode 100644
-index 00000000..3e527d55
+index 00000000..9c6ec907
 --- /dev/null
 +++ b/src/dxvk/dxvk_pipecompiler.cpp
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,76 @@
 +#include "dxvk_device.h"
 +#include "dxvk_graphics.h"
 +#include "dxvk_pipecompiler.h"
@@ -339,9 +339,7 @@ index 00000000..3e527d55
 +    if (device->config().numCompilerThreads > 0)
 +      numWorkers = device->config().numCompilerThreads;
 +
-+    Logger::info(str::format(
-+      "DxvkPipelineCompiler: Using ",
-+      numWorkers, " workers"));
++    Logger::info(str::format("DXVK: Using ", numWorkers, " async compiler threads"));
 +
 +    // Start the compiler threads
 +    m_compilerThreads.resize(numWorkers);

@@ -12,7 +12,7 @@ index 8fa3ce61..5e4d32d1 100644
    output: 'version.h')
  
 diff --git a/src/dxvk/dxvk_context.cpp b/src/dxvk/dxvk_context.cpp
-index 797c4e20..e77a00bf 100644
+index 797c4e20..591f0dfc 100644
 --- a/src/dxvk/dxvk_context.cpp
 +++ b/src/dxvk/dxvk_context.cpp
 @@ -570,7 +570,7 @@ namespace dxvk {
@@ -53,7 +53,7 @@ index 797c4e20..e77a00bf 100644
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer)) {
        m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
  
-@@ -4114,6 +4116,11 @@ namespace dxvk {
+@@ -4114,11 +4116,25 @@ namespace dxvk {
          m_state.gp.state.omSwizzle[i] = DxvkOmAttachmentSwizzle(mapping);
        }
  
@@ -65,22 +65,8 @@ index 797c4e20..e77a00bf 100644
        m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
      }
    }
-@@ -4343,7 +4350,7 @@ namespace dxvk {
-     }
- 
-     if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer))
--      this->updateFramebuffer();
-+      this->updateFramebuffer(true);
- 
-     if (!m_flags.test(DxvkContextFlag::GpRenderPassBound))
-       this->startRenderPass();
-@@ -4794,4 +4801,13 @@ namespace dxvk {
-     return m_cpLookupCache[idx];
-   }
    
--}
-\ No newline at end of file
-+
+   
 +  bool DxvkContext::checkAsyncCompilationCompat() {
 +    bool fbCompat = true;
 +    for (uint32_t i = 0; fbCompat && i < m_state.om.framebuffer->numAttachments(); i++) {
@@ -89,30 +75,33 @@ index 797c4e20..e77a00bf 100644
 +    }
 +    return fbCompat;
 +  }
-+}
++
+   void DxvkContext::updateIndexBufferBinding() {
+     m_flags.clr(DxvkContextFlag::GpDirtyIndexBuffer);
+     
+@@ -4343,7 +4359,7 @@ namespace dxvk {
+     }
+ 
+     if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer))
+-      this->updateFramebuffer();
++      this->updateFramebuffer(true);
+ 
+     if (!m_flags.test(DxvkContextFlag::GpRenderPassBound))
+       this->startRenderPass();
 diff --git a/src/dxvk/dxvk_context.h b/src/dxvk/dxvk_context.h
-index 2456b20a..882949db 100644
+index 2456b20a..ce863c47 100644
 --- a/src/dxvk/dxvk_context.h
 +++ b/src/dxvk/dxvk_context.h
-@@ -1159,7 +1159,7 @@ namespace dxvk {
+@@ -1159,7 +1159,8 @@ namespace dxvk {
              VkDescriptorSet         set,
        const DxvkPipelineLayout*     layout);
  
 -    void updateFramebuffer();
 +    void updateFramebuffer(bool isDraw);
++    bool checkAsyncCompilationCompat();
      
      void updateIndexBufferBinding();
      void updateVertexBufferBindings();
-@@ -1217,6 +1217,7 @@ namespace dxvk {
-     DxvkComputePipeline* lookupComputePipeline(
-       const DxvkComputePipelineShaders&   shaders);
- 
-+    bool checkAsyncCompilationCompat();
-   };
-   
--}
-\ No newline at end of file
-+}
 diff --git a/src/dxvk/dxvk_graphics.cpp b/src/dxvk/dxvk_graphics.cpp
 index 192e340b..96826600 100644
 --- a/src/dxvk/dxvk_graphics.cpp
@@ -176,7 +165,7 @@ index 192e340b..96826600 100644
        if (instance.isCompatible(state, renderPass))
          return &instance;
 diff --git a/src/dxvk/dxvk_graphics.h b/src/dxvk/dxvk_graphics.h
-index 4194599d..6afa9b62 100644
+index 4194599d..c48ee3ed 100644
 --- a/src/dxvk/dxvk_graphics.h
 +++ b/src/dxvk/dxvk_graphics.h
 @@ -185,11 +185,13 @@ namespace dxvk {
@@ -220,7 +209,7 @@ index 4194599d..6afa9b62 100644
      std::vector<DxvkGraphicsPipelineInstance> m_pipelines;
      
      DxvkGraphicsPipelineInstance* createInstance(
-@@ -248,14 +256,10 @@ namespace dxvk {
+@@ -248,10 +256,6 @@ namespace dxvk {
      bool validatePipelineState(
        const DxvkGraphicsPipelineStateInfo& state) const;
      
@@ -231,14 +220,8 @@ index 4194599d..6afa9b62 100644
      void logPipelineState(
              LogLevel                       level,
        const DxvkGraphicsPipelineStateInfo& state) const;
- 
-   };
-   
--}
-\ No newline at end of file
-+}
 diff --git a/src/dxvk/dxvk_image.h b/src/dxvk/dxvk_image.h
-index 19b5d85f..b9d62a79 100644
+index 19b5d85f..3da24c49 100644
 --- a/src/dxvk/dxvk_image.h
 +++ b/src/dxvk/dxvk_image.h
 @@ -465,6 +465,37 @@ namespace dxvk {
@@ -279,7 +262,7 @@ index 19b5d85f..b9d62a79 100644
    private:
      
      Rc<vk::DeviceFn>  m_vkd;
-@@ -473,8 +504,11 @@ namespace dxvk {
+@@ -473,6 +504,9 @@ namespace dxvk {
      DxvkImageViewCreateInfo m_info;
      VkImageView             m_views[ViewCount];
  
@@ -289,10 +272,6 @@ index 19b5d85f..b9d62a79 100644
      void createView(VkImageViewType type, uint32_t numLayers);
      
    };
-   
--}
-\ No newline at end of file
-+}
 diff --git a/src/dxvk/dxvk_options.cpp b/src/dxvk/dxvk_options.cpp
 index 904082f6..53f7bf14 100644
 --- a/src/dxvk/dxvk_options.cpp

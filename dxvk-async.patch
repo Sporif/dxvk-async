@@ -319,7 +319,7 @@ index 6843c16f..70bcd437 100644
      bool enableOpenVR;
 diff --git a/src/dxvk/dxvk_pipecompiler.cpp b/src/dxvk/dxvk_pipecompiler.cpp
 new file mode 100644
-index 00000000..88cac0d3
+index 00000000..3e527d55
 --- /dev/null
 +++ b/src/dxvk/dxvk_pipecompiler.cpp
 @@ -0,0 +1,78 @@
@@ -354,7 +354,7 @@ index 00000000..88cac0d3
 +
 +
 +  DxvkPipelineCompiler::~DxvkPipelineCompiler() {
-+    { std::unique_lock<std::mutex> lock(m_compilerLock);
++    { std::lock_guard<std::mutex> lock(m_compilerLock);
 +      m_compilerStop.store(true);
 +    }
 +
@@ -368,7 +368,7 @@ index 00000000..88cac0d3
 +    DxvkGraphicsPipeline*                   pipeline,
 +    const DxvkGraphicsPipelineStateInfo&    state,
 +    const DxvkRenderPass*                   renderPass) {
-+    std::unique_lock<std::mutex> lock(m_compilerLock);
++    std::lock_guard<std::mutex> lock(m_compilerLock);
 +    m_compilerQueue.push({ pipeline, state, renderPass });
 +    m_compilerCond.notify_one();
 +  }

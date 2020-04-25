@@ -273,32 +273,47 @@ index 19b5d85f..3da24c49 100644
      
    };
 diff --git a/src/dxvk/dxvk_options.cpp b/src/dxvk/dxvk_options.cpp
-index 904082f6..53f7bf14 100644
+index 904082f6..a562002c 100644
 --- a/src/dxvk/dxvk_options.cpp
 +++ b/src/dxvk/dxvk_options.cpp
-@@ -5,6 +5,7 @@ namespace dxvk {
+@@ -5,7 +5,9 @@ namespace dxvk {
    DxvkOptions::DxvkOptions(const Config& config) {
      enableStateCache      = config.getOption<bool>    ("dxvk.enableStateCache",       true);
      enableOpenVR          = config.getOption<bool>    ("dxvk.enableOpenVR",           true);
 +    useAsync              = config.getOption<bool>    ("dxvk.useAsync",               false);
      numCompilerThreads    = config.getOption<int32_t> ("dxvk.numCompilerThreads",     0);
++    numCompilerThreads    = config.getOption<int32_t> ("dxvk.numAsyncCompilerThreads",0);
      useRawSsbo            = config.getOption<Tristate>("dxvk.useRawSsbo",             Tristate::Auto);
      useEarlyDiscard       = config.getOption<Tristate>("dxvk.useEarlyDiscard",        Tristate::Auto);
+     hud                   = config.getOption<std::string>("dxvk.hud", "");
 diff --git a/src/dxvk/dxvk_options.h b/src/dxvk/dxvk_options.h
-index 6843c16f..70bcd437 100644
+index 6843c16f..98e14c8d 100644
 --- a/src/dxvk/dxvk_options.h
 +++ b/src/dxvk/dxvk_options.h
-@@ -10,6 +10,7 @@ namespace dxvk {
- 
+@@ -11,6 +11,9 @@ namespace dxvk {
      /// Enable state cache
      bool enableStateCache;
-+    bool useAsync;
  
++    // Enable async pipelines
++    bool useAsync;
++
      /// Enables OpenVR loading
      bool enableOpenVR;
+ 
+@@ -18,6 +21,10 @@ namespace dxvk {
+     /// when using the state cache
+     int32_t numCompilerThreads;
+ 
++    /// Number of compiler threads
++    /// when using async pipelines
++    int32_t numAsyncCompilerThreads;
++
+     /// Shader-related options
+     Tristate useRawSsbo;
+     Tristate useEarlyDiscard;
 diff --git a/src/dxvk/dxvk_pipecompiler.cpp b/src/dxvk/dxvk_pipecompiler.cpp
 new file mode 100644
-index 00000000..9c6ec907
+index 00000000..3867a070
 --- /dev/null
 +++ b/src/dxvk/dxvk_pipecompiler.cpp
 @@ -0,0 +1,76 @@
@@ -315,8 +330,8 @@ index 00000000..9c6ec907
 +    if (numWorkers <  1) numWorkers =  1;
 +    if (numWorkers > 32) numWorkers = 32;
 +
-+    if (device->config().numCompilerThreads > 0)
-+      numWorkers = device->config().numCompilerThreads;
++    if (device->config().numAsyncCompilerThreads > 0)
++      numWorkers = device->config().numAsyncCompilerThreads;
 +
 +    Logger::info(str::format("DXVK: Using ", numWorkers, " async compiler threads"));
 +

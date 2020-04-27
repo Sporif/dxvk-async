@@ -461,7 +461,7 @@ index 00000000..d7fcc2cf
 +
 +}
 diff --git a/src/dxvk/dxvk_pipemanager.cpp b/src/dxvk/dxvk_pipemanager.cpp
-index 2e29202e..3ffd55ea 100644
+index 2e29202e..86574914 100644
 --- a/src/dxvk/dxvk_pipemanager.cpp
 +++ b/src/dxvk/dxvk_pipemanager.cpp
 @@ -9,7 +9,11 @@ namespace dxvk {
@@ -471,7 +471,7 @@ index 2e29202e..3ffd55ea 100644
 +    std::string useAsync      = env::getEnvVar("DXVK_ASYNC");
      std::string useStateCache = env::getEnvVar("DXVK_STATE_CACHE");
 +
-+    if (useAsync != "0" || device->config().enableAsync)
++    if (useAsync != "0" && device->config().enableAsync)
 +      m_compiler = new DxvkPipelineCompiler(device);
      
      if (useStateCache != "0" && device->config().enableStateCache)

@@ -12,27 +12,9 @@ index 8fa3ce61..5e4d32d1 100644
    output: 'version.h')
  
 diff --git a/src/dxvk/dxvk_context.cpp b/src/dxvk/dxvk_context.cpp
-index 797c4e20..591f0dfc 100644
+index 797c4e20..b2eb66bb 100644
 --- a/src/dxvk/dxvk_context.cpp
 +++ b/src/dxvk/dxvk_context.cpp
-@@ -570,7 +570,7 @@ namespace dxvk {
-     const Rc<DxvkImageView>&    imageView,
-           VkImageAspectFlags    clearAspects,
-           VkClearValue          clearValue) {
--    this->updateFramebuffer();
-+    this->updateFramebuffer(false);
- 
-     // Prepare attachment ops
-     DxvkColorAttachmentOps colorOp;
-@@ -2606,7 +2606,7 @@ namespace dxvk {
-           VkExtent3D            extent,
-           VkImageAspectFlags    aspect,
-           VkClearValue          value) {
--    this->updateFramebuffer();
-+    this->updateFramebuffer(false);
- 
-     // Find out if the render target view is currently bound,
-     // so that we can avoid spilling the render pass if it is.
 @@ -3837,7 +3837,9 @@ namespace dxvk {
        : DxvkContextFlag::GpDirtyStencilRef);
      
@@ -53,7 +35,7 @@ index 797c4e20..591f0dfc 100644
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer)) {
        m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
  
-@@ -4114,11 +4116,25 @@ namespace dxvk {
+@@ -4114,10 +4116,23 @@ namespace dxvk {
          m_state.gp.state.omSwizzle[i] = DxvkOmAttachmentSwizzle(mapping);
        }
  
@@ -66,7 +48,6 @@ index 797c4e20..591f0dfc 100644
      }
    }
    
-   
 +  bool DxvkContext::checkAsyncCompilationCompat() {
 +    bool fbCompat = true;
 +    for (uint32_t i = 0; fbCompat && i < m_state.om.framebuffer->numAttachments(); i++) {
@@ -75,11 +56,10 @@ index 797c4e20..591f0dfc 100644
 +    }
 +    return fbCompat;
 +  }
-+
+   
    void DxvkContext::updateIndexBufferBinding() {
      m_flags.clr(DxvkContextFlag::GpDirtyIndexBuffer);
-     
-@@ -4343,7 +4359,7 @@ namespace dxvk {
+@@ -4343,7 +4358,7 @@ namespace dxvk {
      }
  
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer))
@@ -89,7 +69,7 @@ index 797c4e20..591f0dfc 100644
      if (!m_flags.test(DxvkContextFlag::GpRenderPassBound))
        this->startRenderPass();
 diff --git a/src/dxvk/dxvk_context.h b/src/dxvk/dxvk_context.h
-index 2456b20a..ce863c47 100644
+index 2456b20a..e1306b40 100644
 --- a/src/dxvk/dxvk_context.h
 +++ b/src/dxvk/dxvk_context.h
 @@ -1159,7 +1159,8 @@ namespace dxvk {
@@ -97,7 +77,7 @@ index 2456b20a..ce863c47 100644
        const DxvkPipelineLayout*     layout);
  
 -    void updateFramebuffer();
-+    void updateFramebuffer(bool isDraw);
++    void updateFramebuffer(bool isDraw = false);
 +    bool checkAsyncCompilationCompat();
      
      void updateIndexBufferBinding();

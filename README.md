@@ -3,7 +3,7 @@ An attempt to improve the dxvk async patch at https://github.com/jomihaka/dxvk-p
 
 ### Improvements
 
- - Compatible with dxvk v1.4.5 - v1.6.1 and enabled by default (can still be disabled with `DXVK_ASYNC=0` or `dxvk.enableAsync = false`).
+ - Compatible with dxvk v1.4.5 - v1.6.1.
 
  - Async pipelines are written to the state cache. The original patch doesn't since it was made before dxvk introduced the state cache. Previously you would end up with near empty state caches when using dxvk-async, now you can have the best of both worlds.
 
@@ -14,5 +14,6 @@ An attempt to improve the dxvk async patch at https://github.com/jomihaka/dxvk-p
 ### Instructions
 
 * Patch dxvk with dxvk-async.patch
+* Set the environment variable `DXVK_ASYNC=1` or use `dxvk.enableAsync = true` in dxvk.conf
 * To compare with stock dxvk, rename or delete your state and shader caches
 * Use `DXVK_HUD=pipelines` to see the pipeline count go up (hopefully) without stutter

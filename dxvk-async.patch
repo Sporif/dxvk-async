@@ -264,14 +264,14 @@ index 19b5d85f..3da24c49 100644
      
    };
 diff --git a/src/dxvk/dxvk_options.cpp b/src/dxvk/dxvk_options.cpp
-index 904082f6..dedf97e5 100644
+index 904082f6..999723cc 100644
 --- a/src/dxvk/dxvk_options.cpp
 +++ b/src/dxvk/dxvk_options.cpp
 @@ -3,8 +3,10 @@
  namespace dxvk {
  
    DxvkOptions::DxvkOptions(const Config& config) {
-+    enableAsync           = config.getOption<bool>    ("dxvk.enableAsync",            true);
++    enableAsync           = config.getOption<bool>    ("dxvk.enableAsync",            false);
      enableStateCache      = config.getOption<bool>    ("dxvk.enableStateCache",       true);
      enableOpenVR          = config.getOption<bool>    ("dxvk.enableOpenVR",           true);
 +    numAsyncThreads       = config.getOption<int32_t> ("dxvk.numAsyncThreads",        0);
@@ -452,7 +452,7 @@ index 00000000..d7fcc2cf
 +
 +}
 diff --git a/src/dxvk/dxvk_pipemanager.cpp b/src/dxvk/dxvk_pipemanager.cpp
-index 2e29202e..86574914 100644
+index 2e29202e..3ffd55ea 100644
 --- a/src/dxvk/dxvk_pipemanager.cpp
 +++ b/src/dxvk/dxvk_pipemanager.cpp
 @@ -9,7 +9,11 @@ namespace dxvk {
@@ -462,7 +462,7 @@ index 2e29202e..86574914 100644
 +    std::string useAsync      = env::getEnvVar("DXVK_ASYNC");
      std::string useStateCache = env::getEnvVar("DXVK_STATE_CACHE");
 +
-+    if (useAsync != "0" && device->config().enableAsync)
++    if (useAsync != "0" || device->config().enableAsync)
 +      m_compiler = new DxvkPipelineCompiler(device);
      
      if (useStateCache != "0" && device->config().enableStateCache)

@@ -12,7 +12,7 @@ index 8fa3ce61..5e4d32d1 100644
    output: 'version.h')
  
 diff --git a/src/dxvk/dxvk_context.cpp b/src/dxvk/dxvk_context.cpp
-index 797c4e20..b2eb66bb 100644
+index 797c4e20..bda90275 100644
 --- a/src/dxvk/dxvk_context.cpp
 +++ b/src/dxvk/dxvk_context.cpp
 @@ -3837,7 +3837,9 @@ namespace dxvk {
@@ -35,7 +35,7 @@ index 797c4e20..b2eb66bb 100644
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer)) {
        m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
  
-@@ -4114,10 +4116,23 @@ namespace dxvk {
+@@ -4114,6 +4116,11 @@ namespace dxvk {
          m_state.gp.state.omSwizzle[i] = DxvkOmAttachmentSwizzle(mapping);
        }
  
@@ -47,6 +47,18 @@ index 797c4e20..b2eb66bb 100644
        m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
      }
    }
+@@ -4343,7 +4350,7 @@ namespace dxvk {
+     }
+ 
+     if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer))
+-      this->updateFramebuffer();
++      this->updateFramebuffer(true);
+ 
+     if (!m_flags.test(DxvkContextFlag::GpRenderPassBound))
+       this->startRenderPass();
+@@ -4772,6 +4779,14 @@ namespace dxvk {
+     }
+   }
    
 +  bool DxvkContext::checkAsyncCompilationCompat() {
 +    bool fbCompat = true;
@@ -56,32 +68,31 @@ index 797c4e20..b2eb66bb 100644
 +    }
 +    return fbCompat;
 +  }
-   
-   void DxvkContext::updateIndexBufferBinding() {
-     m_flags.clr(DxvkContextFlag::GpDirtyIndexBuffer);
-@@ -4343,7 +4358,7 @@ namespace dxvk {
-     }
  
-     if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer))
--      this->updateFramebuffer();
-+      this->updateFramebuffer(true);
- 
-     if (!m_flags.test(DxvkContextFlag::GpRenderPassBound))
-       this->startRenderPass();
+   DxvkGraphicsPipeline* DxvkContext::lookupGraphicsPipeline(
+     const DxvkGraphicsPipelineShaders&  shaders) {
 diff --git a/src/dxvk/dxvk_context.h b/src/dxvk/dxvk_context.h
-index 2456b20a..e1306b40 100644
+index 2456b20a..d58f1021 100644
 --- a/src/dxvk/dxvk_context.h
 +++ b/src/dxvk/dxvk_context.h
-@@ -1159,7 +1159,8 @@ namespace dxvk {
+@@ -1159,7 +1159,7 @@ namespace dxvk {
              VkDescriptorSet         set,
        const DxvkPipelineLayout*     layout);
  
 -    void updateFramebuffer();
 +    void updateFramebuffer(bool isDraw = false);
-+    bool checkAsyncCompilationCompat();
      
      void updateIndexBufferBinding();
      void updateVertexBufferBindings();
+@@ -1211,6 +1211,8 @@ namespace dxvk {
+ 
+     void trackDrawBuffer();
+ 
++    bool checkAsyncCompilationCompat();
++
+     DxvkGraphicsPipeline* lookupGraphicsPipeline(
+       const DxvkGraphicsPipelineShaders&  shaders);
+ 
 diff --git a/src/dxvk/dxvk_graphics.cpp b/src/dxvk/dxvk_graphics.cpp
 index 192e340b..96826600 100644
 --- a/src/dxvk/dxvk_graphics.cpp

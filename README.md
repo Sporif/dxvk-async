@@ -3,7 +3,7 @@ An attempt to improve the dxvk async patch at https://github.com/jomihaka/dxvk-p
 
 ### Improvements
 
- - Compatible with dxvk v1.4.3 - v1.8
+ - Compatible with dxvk v1.4.3 - v1.8.1
 
  - Async pipelines are written to the state cache. The original patch doesn't since it was made before dxvk introduced the state cache. Previously you would end up with near empty state caches when using dxvk-async, now you can have the best of both worlds.
 

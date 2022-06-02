@@ -1,21 +1,21 @@
 diff --git a/meson.build b/meson.build
-index 13b1edd8..60afa50d 100644
+index d191b05d..25cbba7c 100644
 --- a/meson.build
 +++ b/meson.build
-@@ -108,7 +108,7 @@ else
+@@ -129,7 +129,7 @@ else
  endif
  
  dxvk_version = vcs_tag(
 -  command: ['git', 'describe', '--dirty=+'],
 +  command: ['git', 'describe', '--dirty=-async'],
    input:  'version.h.in',
-   output: 'version.h',
- )
+   output: 'version.h')
+ 
 diff --git a/src/dxvk/dxvk_context.cpp b/src/dxvk/dxvk_context.cpp
-index ac85428b..7dc80740 100644
+index 6462e4d2..08e18a78 100644
 --- a/src/dxvk/dxvk_context.cpp
 +++ b/src/dxvk/dxvk_context.cpp
-@@ -4138,7 +4138,7 @@ namespace dxvk {
+@@ -4117,7 +4117,7 @@ namespace dxvk {
      
      // Retrieve and bind actual Vulkan pipeline handle
      m_gpActivePipeline = m_state.gp.pipeline->getPipelineHandle(
@@ -24,7 +24,7 @@ index ac85428b..7dc80740 100644
  
      if (unlikely(!m_gpActivePipeline))
        return false;
-@@ -4379,7 +4379,7 @@ namespace dxvk {
+@@ -4358,7 +4358,7 @@ namespace dxvk {
    }
  
  
@@ -33,7 +33,7 @@ index ac85428b..7dc80740 100644
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer)) {
        m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
  
-@@ -4401,6 +4401,11 @@ namespace dxvk {
+@@ -4380,6 +4380,11 @@ namespace dxvk {
          m_state.gp.state.omSwizzle[i] = DxvkOmAttachmentSwizzle(mapping);
        }
  
@@ -45,7 +45,7 @@ index ac85428b..7dc80740 100644
        m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
      }
    }
-@@ -4804,7 +4809,7 @@ namespace dxvk {
+@@ -4783,7 +4788,7 @@ namespace dxvk {
      }
  
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer))
@@ -54,7 +54,7 @@ index ac85428b..7dc80740 100644
  
      if (!m_flags.test(DxvkContextFlag::GpRenderPassBound))
        this->startRenderPass();
-@@ -5218,6 +5223,14 @@ namespace dxvk {
+@@ -5197,6 +5202,14 @@ namespace dxvk {
      return true;
    }
    
@@ -92,7 +92,7 @@ index 39c5b989..78ef3b02 100644
        const DxvkGraphicsPipelineShaders&  shaders);
  
 diff --git a/src/dxvk/dxvk_graphics.cpp b/src/dxvk/dxvk_graphics.cpp
-index 66c4131e..a820502e 100644
+index 98f5b2ed..e741f59d 100644
 --- a/src/dxvk/dxvk_graphics.cpp
 +++ b/src/dxvk/dxvk_graphics.cpp
 @@ -62,7 +62,8 @@ namespace dxvk {
@@ -139,7 +139,7 @@ index 66c4131e..a820502e 100644
      const DxvkGraphicsPipelineStateInfo& state,
      const DxvkRenderPass*                renderPass) {
      // Exit early if the state vector is invalid
-     if (!this->validatePipelineState(state, false))
+     if (!this->validatePipelineState(state))
 -      return;
 +      return false;
  
@@ -171,10 +171,10 @@ index 66c4131e..a820502e 100644
        if (instance.isCompatible(state, renderPass))
          return &instance;
 diff --git a/src/dxvk/dxvk_graphics.h b/src/dxvk/dxvk_graphics.h
-index 50d16b1e..21274fd6 100644
+index 3a4d93f3..e169d8f1 100644
 --- a/src/dxvk/dxvk_graphics.h
 +++ b/src/dxvk/dxvk_graphics.h
-@@ -199,11 +199,13 @@ namespace dxvk {
+@@ -187,11 +187,13 @@ namespace dxvk {
       * state. If necessary, a new pipeline will be created.
       * \param [in] state Pipeline state vector
       * \param [in] renderPass The render pass
@@ -189,7 +189,7 @@ index 50d16b1e..21274fd6 100644
      
      /**
       * \brief Compiles a pipeline
-@@ -212,11 +214,16 @@ namespace dxvk {
+@@ -200,11 +202,16 @@ namespace dxvk {
       * and stores the result for future use.
       * \param [in] state Pipeline state vector
       * \param [in] renderPass The render pass
@@ -207,7 +207,7 @@ index 50d16b1e..21274fd6 100644
    private:
      
      Rc<vk::DeviceFn>            m_vkd;
-@@ -236,6 +243,8 @@ namespace dxvk {
+@@ -224,6 +231,8 @@ namespace dxvk {
      // List of pipeline instances, shared between threads
      alignas(CACHE_LINE_SIZE)
      dxvk::mutex                               m_mutex;
@@ -216,9 +216,9 @@ index 50d16b1e..21274fd6 100644
      sync::List<DxvkGraphicsPipelineInstance>  m_pipelines;
      
      DxvkGraphicsPipelineInstance* createInstance(
-@@ -264,10 +273,6 @@ namespace dxvk {
-       const DxvkGraphicsPipelineStateInfo& state,
-             bool                           trusted) const;
+@@ -251,10 +260,6 @@ namespace dxvk {
+     bool validatePipelineState(
+       const DxvkGraphicsPipelineStateInfo& state) const;
      
 -    void writePipelineStateToCache(
 -      const DxvkGraphicsPipelineStateInfo& state,
@@ -228,10 +228,10 @@ index 50d16b1e..21274fd6 100644
              LogLevel                       level,
        const DxvkGraphicsPipelineStateInfo& state) const;
 diff --git a/src/dxvk/dxvk_image.h b/src/dxvk/dxvk_image.h
-index b3b8a58e..922e1f21 100644
+index 5b1a8b15..e68f2eb1 100644
 --- a/src/dxvk/dxvk_image.h
 +++ b/src/dxvk/dxvk_image.h
-@@ -552,6 +552,37 @@ namespace dxvk {
+@@ -539,6 +539,37 @@ namespace dxvk {
          view->imageSubresources());
      }
  
@@ -269,7 +269,7 @@ index b3b8a58e..922e1f21 100644
    private:
      
      Rc<vk::DeviceFn>  m_vkd;
-@@ -564,6 +595,9 @@ namespace dxvk {
+@@ -551,6 +582,9 @@ namespace dxvk {
  
      static std::atomic<uint64_t> s_cookie;
  
@@ -280,10 +280,10 @@ index b3b8a58e..922e1f21 100644
      
    };
 diff --git a/src/dxvk/dxvk_options.cpp b/src/dxvk/dxvk_options.cpp
-index ea82eedc..46f9ff48 100644
+index 39e9a820..1b320e08 100644
 --- a/src/dxvk/dxvk_options.cpp
 +++ b/src/dxvk/dxvk_options.cpp
-@@ -9,6 +9,8 @@ namespace dxvk {
+@@ -8,6 +8,8 @@ namespace dxvk {
      useRawSsbo            = config.getOption<Tristate>("dxvk.useRawSsbo",             Tristate::Auto);
      shrinkNvidiaHvvHeap   = config.getOption<Tristate>("dxvk.shrinkNvidiaHvvHeap",    Tristate::Auto);
      hud                   = config.getOption<std::string>("dxvk.hud", "");
@@ -293,10 +293,10 @@ index ea82eedc..46f9ff48 100644
  
  }
 diff --git a/src/dxvk/dxvk_options.h b/src/dxvk/dxvk_options.h
-index 992ec764..6398e9d1 100644
+index 2fb0163a..d7a6719c 100644
 --- a/src/dxvk/dxvk_options.h
 +++ b/src/dxvk/dxvk_options.h
-@@ -18,6 +18,13 @@ namespace dxvk {
+@@ -15,6 +15,13 @@ namespace dxvk {
      /// when using the state cache
      int32_t numCompilerThreads;
  
@@ -496,7 +496,7 @@ index f32a8913..533042ca 100644
      std::atomic<uint32_t>     m_numComputePipelines  = { 0 };
      std::atomic<uint32_t>     m_numGraphicsPipelines = { 0 };
 diff --git a/src/dxvk/meson.build b/src/dxvk/meson.build
-index 3153c8cf..9cfd681b 100644
+index a68d0e11..9915d88f 100644
 --- a/src/dxvk/meson.build
 +++ b/src/dxvk/meson.build
 @@ -90,6 +90,7 @@ dxvk_src = files([

@@ -17,3 +17,8 @@ An attempt to improve the dxvk async patch at https://github.com/jomihaka/dxvk-p
 * Set the environment variable `DXVK_ASYNC=1` or use `dxvk.enableAsync = true` in dxvk.conf
 * To compare with stock dxvk, rename or delete your state and shader caches
 * Use `DXVK_HUD=pipelines` to see the pipeline count go up (hopefully) without stutter
+
+## Warnings
+
+dxvk-async has had a bit of a history with triggering client-side anti cheats, and as such, may be risky to use inside of multiplayer games.
+If you have been banned because of dxvk-async, please report about it at [this issue here](https://github.com/Sporif/dxvk-async/issues/42) with information about your system (like a neofetch), distribution/OS (BSD, GNU/Linux, etc.), how long it took the ban to take effect, and whether or not you were able to get unbanned. 

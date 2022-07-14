@@ -3,7 +3,7 @@ An attempt to improve the dxvk async patch at https://github.com/jomihaka/dxvk-p
 
 ### Improvements
 
- - Compatible with dxvk v1.4.3 - v1.10.1
+ - Compatible with dxvk v1.4.3 - v1.10.2
 
  - Async pipelines are written to the state cache. The original patch doesn't since it was made before dxvk introduced the state cache. Previously you would end up with near empty state caches when using dxvk-async, now you can have the best of both worlds.
 
@@ -17,6 +17,15 @@ An attempt to improve the dxvk async patch at https://github.com/jomihaka/dxvk-p
 * Set the environment variable `DXVK_ASYNC=1` or use `dxvk.enableAsync = true` in dxvk.conf
 * To compare with stock dxvk, rename or delete your state and shader caches
 * Use `DXVK_HUD=pipelines` to see the pipeline count go up (hopefully) without stutter
+
+### Compatibility Matrix
+
+| Async Patch  | DXVK Version |
+|--------------|--------------|
+| [dxvk-async-af418dc.patch](https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-af418dc.patch) | 1.10.2 | 
+| [dxvk-async-80e125a.patch](https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-80e125a.patch) | 1.10  - 1.10.1 | 
+| [dxvk-async-67e2ee1.patch](https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-67e2ee1.patch) | 1.9.3 - 1.9.4  | 
+| [dxvk-async-f1aad6c.patch](https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-f1aad6c.patch) | 1.4.3 - 1.9.1  | 
 
 ## Warnings
 

@@ -20,5 +20,5 @@ An attempt to improve the dxvk async patch at https://github.com/jomihaka/dxvk-p
 
 ## Warnings
 
-dxvk-async has had a bit of a history with triggering client-side anti cheats, and as such, may be risky to use inside of multiplayer games.
+dxvk-async could theoretically trigger client-side anti cheats, and as such, may be risky to use inside of multiplayer games.
 If you have been banned because of dxvk-async, please report about it at [this issue here](https://github.com/Sporif/dxvk-async/issues/42) with information about your system (like a neofetch), distribution/OS (BSD, GNU/Linux, etc.), how long it took the ban to take effect, and whether or not you were able to get unbanned. 

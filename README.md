@@ -20,12 +20,19 @@ An attempt to improve the dxvk async patch at https://github.com/jomihaka/dxvk-p
 
 ### Compatibility Matrix
 
-| Async Patch  | DXVK Version |
-|--------------|--------------|
-| [dxvk-async-af418dc.patch](https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-af418dc.patch) | 1.10.2 | 
-| [dxvk-async-80e125a.patch](https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-80e125a.patch) | 1.10  - 1.10.1 | 
-| [dxvk-async-67e2ee1.patch](https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-67e2ee1.patch) | 1.9.3 - 1.9.4  | 
-| [dxvk-async-f1aad6c.patch](https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-f1aad6c.patch) | 1.4.3 - 1.9.1  | 
+| Async Patch | DXVK Versions | DXVK Commits |
+|-|-|-|
+| [dxvk-async.patch] |  | r4275.af418dc - r4320.39a2b1c |
+| [dxvk-async-af418dc.patch] | 1.10.2 | r4217.80e125a - r4274.a27448b |
+| [dxvk-async-80e125a.patch] | 1.10  - 1.10.1 | r4072.67e2ee1 - r4216.4ff7687 |
+| [dxvk-async-67e2ee1.patch] | 1.9.3 - 1.9.4  | r3942.f1aad6c - r4071.a4fe434 |
+| [dxvk-async-f1aad6c.patch] | 1.4.3 - 1.9.2  | r2644.2c974cb - r3941.5b72520 |
+
+[dxvk-async.patch]: https://github.com/Sporif/dxvk-async/blob/master/dxvk-async.patch
+[dxvk-async-af418dc.patch]: https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-af418dc.patch
+[dxvk-async-80e125a.patch]: https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-80e125a.patch
+[dxvk-async-67e2ee1.patch]: https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-67e2ee1.patch
+[dxvk-async-f1aad6c.patch]: https://github.com/Sporif/dxvk-async/blob/master/dxvk-async-f1aad6c.patch
 
 ## Warnings
 

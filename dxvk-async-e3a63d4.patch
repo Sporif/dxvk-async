@@ -1,5 +1,5 @@
 diff --git a/meson.build b/meson.build
-index b6134233..652d1845 100644
+index 13b1edd8..60afa50d 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -108,7 +108,7 @@ else
@@ -12,20 +12,19 @@ index b6134233..652d1845 100644
    output: 'version.h',
  )
 diff --git a/src/dxvk/dxvk_context.cpp b/src/dxvk/dxvk_context.cpp
-index b1716c32..b1ffc3b1 100644
+index 9e65f111..5db74e3f 100644
 --- a/src/dxvk/dxvk_context.cpp
 +++ b/src/dxvk/dxvk_context.cpp
-@@ -4592,7 +4592,8 @@ namespace dxvk {
-       : DxvkContextFlag::GpDirtyRasterizerState);
- 
+@@ -4187,7 +4187,7 @@ namespace dxvk {
+     
      // Retrieve and bind actual Vulkan pipeline handle
--    auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(m_state.gp.state);
-+    auto pipelineInfo = m_state.gp.pipeline->getPipelineHandle(
-+      m_state.gp.state, this->checkAsyncCompilationCompat());
+     VkPipeline pipeline = m_state.gp.pipeline->getPipelineHandle(
+-      m_state.gp.state, m_state.om.framebufferInfo.renderPass());
++      m_state.gp.state, m_state.om.framebufferInfo.renderPass(), this->checkAsyncCompilationCompat());
  
-     if (unlikely(!pipelineInfo.first))
+     if (unlikely(!pipeline))
        return false;
-@@ -4900,7 +4901,7 @@ namespace dxvk {
+@@ -4460,7 +4460,7 @@ namespace dxvk {
    }
  
  
@@ -34,7 +33,7 @@ index b1716c32..b1ffc3b1 100644
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer)) {
        m_flags.clr(DxvkContextFlag::GpDirtyFramebuffer);
  
-@@ -4924,6 +4925,11 @@ namespace dxvk {
+@@ -4482,6 +4482,11 @@ namespace dxvk {
          m_state.gp.state.omSwizzle[i] = DxvkOmAttachmentSwizzle(mapping);
        }
  
@@ -46,16 +45,16 @@ index b1716c32..b1ffc3b1 100644
        m_flags.set(DxvkContextFlag::GpDirtyPipelineState);
      }
    }
-@@ -5371,7 +5377,7 @@ namespace dxvk {
+@@ -4878,7 +4883,7 @@ namespace dxvk {
      }
-     
+ 
      if (m_flags.test(DxvkContextFlag::GpDirtyFramebuffer))
 -      this->updateFramebuffer();
 +      this->updateFramebuffer(true);
  
      if (!m_flags.test(DxvkContextFlag::GpRenderPassBound))
        this->startRenderPass();
-@@ -5811,6 +5817,14 @@ namespace dxvk {
+@@ -5309,6 +5314,14 @@ namespace dxvk {
      return true;
    }
    
@@ -71,10 +70,10 @@ index b1716c32..b1ffc3b1 100644
    DxvkGraphicsPipeline* DxvkContext::lookupGraphicsPipeline(
      const DxvkGraphicsPipelineShaders&  shaders) {
 diff --git a/src/dxvk/dxvk_context.h b/src/dxvk/dxvk_context.h
-index 3e9eff4e..8079ddf4 100644
+index 27aa2897..e5390b7f 100644
 --- a/src/dxvk/dxvk_context.h
 +++ b/src/dxvk/dxvk_context.h
-@@ -1359,7 +1359,7 @@ namespace dxvk {
+@@ -1239,7 +1239,7 @@ namespace dxvk {
      DxvkFramebufferInfo makeFramebufferInfo(
        const DxvkRenderTargets&      renderTargets);
  
@@ -83,7 +82,7 @@ index 3e9eff4e..8079ddf4 100644
      
      void applyRenderTargetLoadLayouts();
  
-@@ -1431,6 +1431,8 @@ namespace dxvk {
+@@ -1319,6 +1319,8 @@ namespace dxvk {
        const Rc<DxvkBuffer>&           buffer,
              VkDeviceSize              copySize);
  
@@ -93,180 +92,143 @@ index 3e9eff4e..8079ddf4 100644
        const DxvkGraphicsPipelineShaders&  shaders);
  
 diff --git a/src/dxvk/dxvk_graphics.cpp b/src/dxvk/dxvk_graphics.cpp
-index bffb9bce..f86833f4 100644
+index b369a9e1..5613f0f7 100644
 --- a/src/dxvk/dxvk_graphics.cpp
 +++ b/src/dxvk/dxvk_graphics.cpp
-@@ -558,7 +558,8 @@ namespace dxvk {
+@@ -50,7 +50,8 @@ namespace dxvk {
  
- 
-   std::pair<VkPipeline, DxvkGraphicsPipelineType> DxvkGraphicsPipeline::getPipelineHandle(
--    const DxvkGraphicsPipelineStateInfo& state) {
-+    const DxvkGraphicsPipelineStateInfo& state,
+   VkPipeline DxvkGraphicsPipeline::getPipelineHandle(
+     const DxvkGraphicsPipelineStateInfo& state,
+-    const DxvkRenderPass*                renderPass) {
++    const DxvkRenderPass*                renderPass,
 +          bool                           async) {
-     DxvkGraphicsPipelineInstance* instance = this->findInstance(state);
+     DxvkGraphicsPipelineInstance* instance = this->findInstance(state, renderPass);
  
      if (unlikely(!instance)) {
-@@ -567,26 +568,33 @@ namespace dxvk {
-         return std::make_pair(VK_NULL_HANDLE, DxvkGraphicsPipelineType::FastPipeline);
+@@ -59,34 +60,41 @@ namespace dxvk {
+         return VK_NULL_HANDLE;
  
        // Prevent other threads from adding new instances and check again
 -      std::lock_guard<dxvk::mutex> lock(m_mutex);
 +      //std::lock_guard<dxvk::mutex> lock(m_mutex);
-       instance = this->findInstance(state);
+       instance = this->findInstance(state, renderPass);
  
        if (!instance) {
--        // Keep pipeline object locked, at worst we're going to stall
--        // a state cache worker and the current thread needs priority.
--        bool canCreateBasePipeline = this->canCreateBasePipeline(state);
--        instance = this->createInstance(state, canCreateBasePipeline);
--
--        // If necessary, compile an optimized pipeline variant
--        if (!instance->fastHandle.load())
--          m_workers->compileGraphicsPipeline(this, state);
--
--        // Only store pipelines in the state cache that cannot benefit
--        // from pipeline libraries, or if that feature is disabled.
--        if (!canCreateBasePipeline)
--          this->writePipelineStateToCache(state);
-+        if (async && m_manager->m_compiler != nullptr)
-+          m_manager->m_compiler->queueCompilation(this, state);
+         // Keep pipeline object locked, at worst we're going to stall
+         // a state cache worker and the current thread needs priority.
+-        instance = this->createInstance(state, renderPass);
+-        this->writePipelineStateToCache(state, renderPass->format());
++        if (async && m_pipeMgr->m_compiler != nullptr)
++          m_pipeMgr->m_compiler->queueCompilation(this, state, renderPass);
 +        else {
-+          // Keep pipeline object locked, at worst we're going to stall
-+          // a state cache worker and the current thread needs priority.
-+          bool canCreateBasePipeline = this->canCreateBasePipeline(state);
-+          instance = this->createInstance(state, canCreateBasePipeline);
-+
-+          // If necessary, compile an optimized pipeline variant
-+          if (!instance->fastHandle.load())
-+            m_workers->compileGraphicsPipeline(this, state);
-+
-+          // Only store pipelines in the state cache that cannot benefit
-+          // from pipeline libraries, or if that feature is disabled.
-+          if (!canCreateBasePipeline)
-+            this->writePipelineStateToCache(state);
-+          }
++          instance = this->createInstance(state, renderPass);
++          this->writePipelineStateToCache(state, renderPass->format());
++        }
        }
      }
  
 +    if (!instance)
-+      return std::make_pair(VK_NULL_HANDLE, DxvkGraphicsPipelineType::FastPipeline);
++      return VK_NULL_HANDLE;
 +
-     // Find a pipeline handle to use. If no optimized pipeline has
-     // been compiled yet, use the slower base pipeline instead.
-     VkPipeline fastHandle = instance->fastHandle.load();
-@@ -598,10 +606,10 @@ namespace dxvk {
+     return instance->pipeline();
    }
  
  
 -  void DxvkGraphicsPipeline::compilePipeline(
 +  bool DxvkGraphicsPipeline::compilePipeline(
-     const DxvkGraphicsPipelineStateInfo& state) {
-     if (m_device->config().enableGraphicsPipelineLibrary == Tristate::True)
+     const DxvkGraphicsPipelineStateInfo& state,
+     const DxvkRenderPass*                renderPass) {
+     // Exit early if the state vector is invalid
+     if (!this->validatePipelineState(state, false))
 -      return;
 +      return false;
  
-     // Try to find an existing instance that contains a base pipeline
-     DxvkGraphicsPipelineInstance* instance = this->findInstance(state);
-@@ -609,12 +617,12 @@ namespace dxvk {
-     if (!instance) {
-       // Exit early if the state vector is invalid
-       if (!this->validatePipelineState(state, false))
--        return;
-+        return false;
+     // Keep the object locked while compiling a pipeline since compiling
+     // similar pipelines concurrently is fragile on some drivers
+     std::lock_guard<dxvk::mutex> lock(m_mutex);
  
-       // Do not compile if this pipeline can be fast linked. This essentially
-       // disables the state cache for pipelines that do not benefit from it.
-       if (this->canCreateBasePipeline(state))
--        return;
-+        return false;
- 
-       // Prevent other threads from adding new instances and check again
-       std::lock_guard<dxvk::mutex> lock(m_mutex);
-@@ -628,7 +636,7 @@ namespace dxvk {
-     // an optimized version of this pipeline
-     if (instance->isCompiling.load()
-      || instance->isCompiling.exchange(VK_TRUE, std::memory_order_acquire))
--      return;
-+      return false;
- 
-     VkPipeline pipeline = this->createOptimizedPipeline(state, 0);
-     instance->fastHandle.store(pipeline, std::memory_order_release);
-@@ -636,6 +644,7 @@ namespace dxvk {
-     // Log pipeline state on error
-     if (!pipeline)
-       this->logPipelineState(LogLevel::Error, state);
-+    return true;
+-    if (!this->findInstance(state, renderPass))
+-      this->createInstance(state, renderPass);
++    return (this->findInstance(state, renderPass) == nullptr) &&
++           (this->createInstance(state, renderPass) != nullptr);
    }
  
  
-@@ -675,6 +684,7 @@ namespace dxvk {
-     if (!fastHandle && !baseHandle)
-       this->logPipelineState(LogLevel::Error, state);
+@@ -95,6 +103,7 @@ namespace dxvk {
+     const DxvkRenderPass*                renderPass) {
+     VkPipeline pipeline = this->createPipeline(state, renderPass);
  
 +    std::lock_guard<dxvk::mutex> lock(m_mutex2);
-     m_stats->numGraphicsPipelines += 1;
-     return &(*m_pipelines.emplace(state, baseHandle, fastHandle));
+     m_pipeMgr->m_numGraphicsPipelines += 1;
+     return &(*m_pipelines.emplace(state, renderPass, pipeline));
    }
-@@ -682,6 +692,7 @@ namespace dxvk {
-   
+@@ -103,6 +112,7 @@ namespace dxvk {
    DxvkGraphicsPipelineInstance* DxvkGraphicsPipeline::findInstance(
-     const DxvkGraphicsPipelineStateInfo& state) {
+     const DxvkGraphicsPipelineStateInfo& state,
+     const DxvkRenderPass*                renderPass) {
 +    std::lock_guard<dxvk::mutex> lock(m_mutex2);
      for (auto& instance : m_pipelines) {
-       if (instance.state == state)
+       if (instance.isCompatible(state, renderPass))
          return &instance;
 diff --git a/src/dxvk/dxvk_graphics.h b/src/dxvk/dxvk_graphics.h
-index 8ab88b74..9b005c61 100644
+index 574d5d2c..800d5965 100644
 --- a/src/dxvk/dxvk_graphics.h
 +++ b/src/dxvk/dxvk_graphics.h
-@@ -362,10 +362,12 @@ namespace dxvk {
-      * Retrieves a pipeline handle for the given pipeline
+@@ -200,11 +200,13 @@ namespace dxvk {
       * state. If necessary, a new pipeline will be created.
       * \param [in] state Pipeline state vector
+      * \param [in] renderPass The render pass
 +     * \param [in] async Compile asynchronously
-      * \returns Pipeline handle and handle type
+      * \returns Pipeline handle
       */
-     std::pair<VkPipeline, DxvkGraphicsPipelineType> getPipelineHandle(
--      const DxvkGraphicsPipelineStateInfo&    state);
-+      const DxvkGraphicsPipelineStateInfo&    state,
+     VkPipeline getPipelineHandle(
+       const DxvkGraphicsPipelineStateInfo&    state,
+-      const DxvkRenderPass*                   renderPass);
++      const DxvkRenderPass*                   renderPass,
 +            bool                              async);
      
      /**
       * \brief Compiles a pipeline
-@@ -374,8 +376,11 @@ namespace dxvk {
+@@ -213,11 +215,16 @@ namespace dxvk {
       * and stores the result for future use.
       * \param [in] state Pipeline state vector
+      * \param [in] renderPass The render pass
++     * \returns \c true if compile succeeded
       */
 -    void compilePipeline(
 +    bool compilePipeline(
-       const DxvkGraphicsPipelineStateInfo&    state);
-+
-+    void writePipelineStateToCache(
-+      const DxvkGraphicsPipelineStateInfo& state) const;
+       const DxvkGraphicsPipelineStateInfo&    state,
+       const DxvkRenderPass*                   renderPass);
      
++    void writePipelineStateToCache(
++      const DxvkGraphicsPipelineStateInfo& state,
++      const DxvkRenderPassFormat&          format) const;
++
    private:
- 
-@@ -399,6 +404,8 @@ namespace dxvk {
+     
+     Rc<vk::DeviceFn>            m_vkd;
+@@ -235,6 +242,8 @@ namespace dxvk {
      // List of pipeline instances, shared between threads
      alignas(CACHE_LINE_SIZE)
-     dxvk::mutex                                   m_mutex;
+     dxvk::mutex                               m_mutex;
 +    alignas(CACHE_LINE_SIZE)
-+    dxvk::mutex                                   m_mutex2;
-     sync::List<DxvkGraphicsPipelineInstance>      m_pipelines;
-     sync::List<DxvkGraphicsPipelineBaseInstance>  m_basePipelines;
++    dxvk::mutex                               m_mutex2;
+     sync::List<DxvkGraphicsPipelineInstance>  m_pipelines;
      
-@@ -440,9 +447,6 @@ namespace dxvk {
+     DxvkGraphicsPipelineInstance* createInstance(
+@@ -263,10 +272,6 @@ namespace dxvk {
        const DxvkGraphicsPipelineStateInfo& state,
              bool                           trusted) const;
      
 -    void writePipelineStateToCache(
--      const DxvkGraphicsPipelineStateInfo& state) const;
+-      const DxvkGraphicsPipelineStateInfo& state,
+-      const DxvkRenderPassFormat&          format) const;
 -    
      void logPipelineState(
              LogLevel                       level,
        const DxvkGraphicsPipelineStateInfo& state) const;
 diff --git a/src/dxvk/dxvk_image.h b/src/dxvk/dxvk_image.h
-index 31458413..900de6fc 100644
+index b3b8a58e..922e1f21 100644
 --- a/src/dxvk/dxvk_image.h
 +++ b/src/dxvk/dxvk_image.h
 @@ -552,6 +552,37 @@ namespace dxvk {
@@ -318,41 +280,25 @@ index 31458413..900de6fc 100644
      
    };
 diff --git a/src/dxvk/dxvk_options.cpp b/src/dxvk/dxvk_options.cpp
-index d251cbcf..52e5e29d 100644
+index ea82eedc..46f9ff48 100644
 --- a/src/dxvk/dxvk_options.cpp
 +++ b/src/dxvk/dxvk_options.cpp
-@@ -10,6 +10,15 @@ namespace dxvk {
+@@ -9,6 +9,8 @@ namespace dxvk {
      useRawSsbo            = config.getOption<Tristate>("dxvk.useRawSsbo",             Tristate::Auto);
-     shrinkNvidiaHvvHeap   = config.getOption<bool>    ("dxvk.shrinkNvidiaHvvHeap",    false);
+     shrinkNvidiaHvvHeap   = config.getOption<Tristate>("dxvk.shrinkNvidiaHvvHeap",    Tristate::Auto);
      hud                   = config.getOption<std::string>("dxvk.hud", "");
++    enableAsync           = config.getOption<bool>    ("dxvk.enableAsync",            false);
 +    numAsyncThreads       = config.getOption<int32_t> ("dxvk.numAsyncThreads",        0);
-+
-+    if (env::getEnvVar("DXVK_ASYNC") == "1")
-+      enableAsync = true;
-+    else
-+      enableAsync = config.getOption<bool>("dxvk.enableAsync", false);
-+
-+    if (enableAsync)
-+      enableGraphicsPipelineLibrary = Tristate::False;
    }
  
  }
 diff --git a/src/dxvk/dxvk_options.h b/src/dxvk/dxvk_options.h
-index c2f7f11b..6eea8e29 100644
+index 992ec764..6398e9d1 100644
 --- a/src/dxvk/dxvk_options.h
 +++ b/src/dxvk/dxvk_options.h
-@@ -2,6 +2,8 @@
- 
- #include "../util/config/config.h"
- 
-+#include "dxvk_include.h"
-+
- namespace dxvk {
- 
-   struct DxvkOptions {
-@@ -21,6 +23,13 @@ namespace dxvk {
-     /// Enable graphics pipeline library
-     Tristate enableGraphicsPipelineLibrary;
+@@ -18,6 +18,13 @@ namespace dxvk {
+     /// when using the state cache
+     int32_t numCompilerThreads;
  
 +    // Enable async pipelines
 +    bool enableAsync;
@@ -366,7 +312,7 @@ index c2f7f11b..6eea8e29 100644
  
 diff --git a/src/dxvk/dxvk_pipecompiler.cpp b/src/dxvk/dxvk_pipecompiler.cpp
 new file mode 100644
-index 00000000..1d5e35d5
+index 00000000..40218acd
 --- /dev/null
 +++ b/src/dxvk/dxvk_pipecompiler.cpp
 @@ -0,0 +1,76 @@
@@ -399,9 +345,6 @@ index 00000000..1d5e35d5
 +
 +
 +  DxvkPipelineCompiler::~DxvkPipelineCompiler() {
-+  }
-+
-+  void DxvkPipelineCompiler::stopWorkerThreads() {
 +    { std::lock_guard<std::mutex> lock(m_compilerLock);
 +      m_compilerStop.store(true);
 +    }
@@ -411,11 +354,13 @@ index 00000000..1d5e35d5
 +      thread.join();
 +  }
 +
++
 +  void DxvkPipelineCompiler::queueCompilation(
 +    DxvkGraphicsPipeline*                   pipeline,
-+    const DxvkGraphicsPipelineStateInfo&    state) {
++    const DxvkGraphicsPipelineStateInfo&    state,
++    const DxvkRenderPass*                   renderPass) {
 +    std::lock_guard<std::mutex> lock(m_compilerLock);
-+    m_compilerQueue.push({ pipeline, state });
++    m_compilerQueue.push({ pipeline, state, renderPass });
 +    m_compilerCond.notify_one();
 +  }
 +
@@ -439,8 +384,9 @@ index 00000000..1d5e35d5
 +        }
 +      }
 +
-+      if (entry.pipeline != nullptr && entry.pipeline->compilePipeline(entry.state)) {
-+          entry.pipeline->writePipelineStateToCache(entry.state);
++      if (entry.pipeline != nullptr && entry.renderPass != nullptr &&
++          entry.pipeline->compilePipeline(entry.state, entry.renderPass)) {
++          entry.pipeline->writePipelineStateToCache(entry.state, entry.renderPass->format());
 +      }
 +    }
 +  }
@@ -448,10 +394,10 @@ index 00000000..1d5e35d5
 +}
 diff --git a/src/dxvk/dxvk_pipecompiler.h b/src/dxvk/dxvk_pipecompiler.h
 new file mode 100644
-index 00000000..2f029956
+index 00000000..d7fcc2cf
 --- /dev/null
 +++ b/src/dxvk/dxvk_pipecompiler.h
-@@ -0,0 +1,63 @@
+@@ -0,0 +1,61 @@
 +#pragma once
 +
 +#include <atomic>
@@ -487,21 +433,19 @@ index 00000000..2f029956
 +     * pipeline instances asynchronously.
 +     * \param [in] pipeline The pipeline object
 +     * \param [in] state The pipeline state info object
++     * \param [in] renderPass
 +     */
 +    void queueCompilation(
 +      DxvkGraphicsPipeline*                   pipeline,
-+      const DxvkGraphicsPipelineStateInfo&    state);
-+
-+    /**
-+     * \brief Stops async compiler threads
-+     */
-+    void stopWorkerThreads();
++      const DxvkGraphicsPipelineStateInfo&    state,
++      const DxvkRenderPass*                   renderPass);
 +
 +  private:
 +
 +    struct PipelineEntry {
 +      DxvkGraphicsPipeline*                   pipeline = nullptr;
 +      DxvkGraphicsPipelineStateInfo           state;
++      const DxvkRenderPass*                   renderPass = nullptr;
 +    };
 +
 +    std::atomic<bool>           m_compilerStop = { false };
@@ -516,56 +460,49 @@ index 00000000..2f029956
 +
 +}
 diff --git a/src/dxvk/dxvk_pipemanager.cpp b/src/dxvk/dxvk_pipemanager.cpp
-index 589f095f..b78f3b6b 100644
+index 3f0120cc..9c2336c7 100644
 --- a/src/dxvk/dxvk_pipemanager.cpp
 +++ b/src/dxvk/dxvk_pipemanager.cpp
-@@ -164,6 +164,9 @@ namespace dxvk {
+@@ -9,7 +9,11 @@ namespace dxvk {
+           DxvkRenderPassPool* passManager)
    : m_device    (device),
-     m_workers   (device),
-     m_stateCache(device, this, &m_workers) {
-+    if (device->config().enableAsync)
-+      m_compiler = new DxvkPipelineCompiler(device);
+     m_cache     (new DxvkPipelineCache(device->vkd())) {
++    std::string useAsync      = env::getEnvVar("DXVK_ASYNC");
+     std::string useStateCache = env::getEnvVar("DXVK_STATE_CACHE");
 +
-     Logger::info(str::format("DXVK: Graphics pipeline libraries ",
-       (m_device->canUseGraphicsPipelineLibrary() ? "supported" : "not supported")));
- 
-@@ -299,6 +302,8 @@ namespace dxvk {
- 
- 
-   void DxvkPipelineManager::stopWorkerThreads() {
-+    if (m_compiler != nullptr)
-+      m_compiler->stopWorkerThreads();
-     m_workers.stopWorkers();
-     m_stateCache.stopWorkers();
-   }
++    if (useAsync == "1" || device->config().enableAsync)
++      m_compiler = new DxvkPipelineCompiler(device);
+     
+     if (useStateCache != "0" && device->config().enableStateCache)
+       m_stateCache = new DxvkStateCache(device, this, passManager);
 diff --git a/src/dxvk/dxvk_pipemanager.h b/src/dxvk/dxvk_pipemanager.h
-index 9e6ed35e..74aa7535 100644
+index 35e71102..b4a65e35 100644
 --- a/src/dxvk/dxvk_pipemanager.h
 +++ b/src/dxvk/dxvk_pipemanager.h
-@@ -8,6 +8,7 @@
+@@ -6,6 +6,7 @@
+ 
  #include "dxvk_compute.h"
  #include "dxvk_graphics.h"
- #include "dxvk_state_cache.h"
 +#include "dxvk_pipecompiler.h"
  
  namespace dxvk {
  
-@@ -223,6 +224,7 @@ namespace dxvk {
+@@ -100,6 +101,7 @@ namespace dxvk {
      DxvkDevice*               m_device;
-     DxvkPipelineWorkers       m_workers;
-     DxvkStateCache            m_stateCache;
+     Rc<DxvkPipelineCache>     m_cache;
+     Rc<DxvkStateCache>        m_stateCache;
 +    Rc<DxvkPipelineCompiler>  m_compiler;
-     DxvkPipelineStats         m_stats;
-     
-     dxvk::mutex m_mutex;
+ 
+     std::atomic<uint32_t>     m_numComputePipelines  = { 0 };
+     std::atomic<uint32_t>     m_numGraphicsPipelines = { 0 };
 diff --git a/src/dxvk/meson.build b/src/dxvk/meson.build
-index 99100b32..ffd2e673 100644
+index 3153c8cf..9cfd681b 100644
 --- a/src/dxvk/meson.build
 +++ b/src/dxvk/meson.build
-@@ -92,6 +92,7 @@ dxvk_src = files([
-   'dxvk_openvr.cpp',
+@@ -90,6 +90,7 @@ dxvk_src = files([
    'dxvk_openxr.cpp',
    'dxvk_options.cpp',
+   'dxvk_pipecache.cpp',
 +  'dxvk_pipecompiler.cpp',
    'dxvk_pipelayout.cpp',
    'dxvk_pipemanager.cpp',

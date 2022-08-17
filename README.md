@@ -1,6 +1,10 @@
 ## dxvk-async
 An attempt to improve the dxvk-async patch at https://github.com/jomihaka/dxvk-poe-hack
 
+## AS OF WEDNESDAY, AUGUST 17th
+An implementation of GPL has been merged into Mesa. This is intended to fix some issues that dxvk-async also addresses with rendering.
+https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/17542
+
 ### Improvements
 
  - Compatible with dxvk v1.4.3 - v1.10.3
